@@ -1,12 +1,24 @@
-FROM python:3.8-slim-buster
+# Use a lightweight and modern Python image
+FROM python:3.11-slim
 
-RUN apt update && apt upgrade -y
-RUN apt install git -y
-COPY requirements.txt /requirements.txt
-
-RUN cd /
-RUN pip3 install -U pip && pip3 install -U -r requirements.txt
-RUN mkdir /fwdbot
+# Set working directory
 WORKDIR /fwdbot
-COPY start.sh /start.sh
-CMD ["/bin/bash", "/start.sh"] 
+
+# Update system and install git
+RUN apt update && apt upgrade -y && \
+    apt install -y git && \
+    apt clean
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy all bot files and start script
+COPY . .
+
+# Expose port 8080 for health check (Flask or FastAPI)
+EXPOSE 8080
+
+# Start the bot using start.sh
+CMD ["bash", "start.sh"]
