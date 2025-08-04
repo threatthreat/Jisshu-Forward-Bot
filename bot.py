@@ -8,10 +8,18 @@ from pyrogram.raw.all import layer
 from pyrogram.enums import ParseMode
 from pyrogram.errors import FloodWait
 
-# 🛡️ FastAPI health check server
+# 🛡️ Flask health check server
 import threading
-from fastapi import FastAPI
-import uvicorn
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return "Hello from jisshu"
+
+def run_flask():
+    app.run(host="0.0.0.0", port=8080)
 
 # bot developer @mr_jisshu
 logging.config.fileConfig('logging.conf')
@@ -71,18 +79,8 @@ class Bot(Client):
         await super().stop()
         logging.info(msg)
 
-# 🚀 FastAPI app for Koyeb health check
-app = FastAPI()
-
-@app.get("/")
-def health_check():
-    return {"status": "ok"}
-
-def run_health_server():
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="error")
-
-# 🔁 Start FastAPI server in background thread
-threading.Thread(target=run_health_server, daemon=True).start()
+# 🧵 Run Flask server in background for Koyeb health check
+threading.Thread(target=run_flask, daemon=True).start()
 
 # ⏯️ Start the bot
 if __name__ == "__main__":
