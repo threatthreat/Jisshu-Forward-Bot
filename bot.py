@@ -1,18 +1,24 @@
 import asyncio
-import logging 
+import logging
 import logging.config
-from database import db 
-from config import Config  
+from database import db
+from config import Config
 from pyrogram import Client, __version__
-from pyrogram.raw.all import layer 
+from pyrogram.raw.all import layer
 from pyrogram.enums import ParseMode
-from pyrogram.errors import FloodWait 
+from pyrogram.errors import FloodWait
+
+# 🛡️ FastAPI health check server
+import threading
+from fastapi import FastAPI
+import uvicorn
+
 # bot developer @mr_jisshu
 logging.config.fileConfig('logging.conf')
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
 
-class Bot(Client): 
+class Bot(Client):
     def __init__(self):
         super().__init__(
             Config.BOT_SESSION,
@@ -34,30 +40,51 @@ class Bot(Client):
         self.username = me.username
         self.first_name = me.first_name
         self.set_parse_mode(ParseMode.DEFAULT)
+
         text = "**๏[-ิ_•ิ]๏ bot restarted !**"
         logging.info(text)
         success = failed = 0
+
         users = await db.get_all_frwd()
         async for user in users:
-           chat_id = user['user_id']
-           try:
-              await self.send_message(chat_id, text)
-              success += 1
-           except FloodWait as e:
-              await asyncio.sleep(e.value + 1)
-              await self.send_message(chat_id, text)
-              success += 1
-           except Exception:
-              failed += 1 
-    #    await self.send_message("venombotsupport", text)
+            chat_id = user['user_id']
+            try:
+                await self.send_message(chat_id, text)
+                success += 1
+            except FloodWait as e:
+                await asyncio.sleep(e.value + 1)
+                await self.send_message(chat_id, text)
+                success += 1
+            except Exception:
+                failed += 1
+
         if (success + failed) != 0:
-           await db.rmve_frwd(all=True)
-           logging.info(f"Restart message status"
-                 f"success: {success}"
-                 f"failed: {failed}")
+            await db.rmve_frwd(all=True)
+            logging.info(
+                f"Restart message status "
+                f"success: {success} "
+                f"failed: {failed}"
+            )
 
     async def stop(self, *args):
         msg = f"@{self.username} stopped. Bye."
         await super().stop()
         logging.info(msg)
-   # bot developer @mr_jisshu
+
+# 🚀 FastAPI app for Koyeb health check
+app = FastAPI()
+
+@app.get("/")
+def health_check():
+    return {"status": "ok"}
+
+def run_health_server():
+    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="error")
+
+# 🔁 Start FastAPI server in background thread
+threading.Thread(target=run_health_server, daemon=True).start()
+
+# ⏯️ Start the bot
+if __name__ == "__main__":
+    bot = Bot()
+    bot.run()
